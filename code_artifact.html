@@ -1,0 +1,757 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>人生游戏化管理系统 - 个人面板</title>
+  <!-- 引入 Element Plus 的 CSS -->
+  <link rel="stylesheet" href="https://unpkg.com/element-plus/dist/index.css" />
+  <style>
+    body { 
+      background-color: #1a1a2e; /* 游戏化深色背景 */
+      margin: 0; 
+      font-family: "Helvetica Neue", Helvetica, "PingFang SC", "Microsoft YaHei", sans-serif; 
+    }
+    .app-container { padding: 20px; max-width: 1100px; margin: 0 auto; }
+    
+    /* 卡片覆盖样式以适配深色游戏主题 */
+    .box-card { 
+      margin-top: 20px; 
+      background: #16213e; 
+      border: 1px solid #0f3460;
+      color: #e94560;
+    }
+    .el-card__header { border-bottom: 1px solid #0f3460; }
+    .card-header { display: flex; justify-content: space-between; align-items: center; font-weight: bold; font-size: 18px;}
+    
+    /* Element UI Tab 样式重写 */
+    .el-tabs__item { color: #8a9ba8; font-size: 16px; }
+    .el-tabs__item.is-active { color: #e94560; font-weight: bold; }
+    
+    /* ====== 个人状态面板专属样式 ====== */
+    .profile-card {
+      background: linear-gradient(145deg, #1f2a48, #16213e);
+      border: 1px solid #2a3654;
+      text-align: center;
+      padding-bottom: 20px;
+    }
+    .avatar-wrapper { margin-bottom: 25px; padding-top: 20px; }
+    .avatar-wrapper h2 { color: #fff; margin: 15px 0 5px; text-shadow: 0 0 10px rgba(233, 69, 96, 0.5); }
+    
+    .bars { padding: 0 20px; text-align: left; }
+    .bar-item { margin-bottom: 15px; }
+    .bar-item span { color: #a4b0be; font-size: 12px; display: inline-block; margin-bottom: 5px; font-weight: bold; letter-spacing: 1px; }
+    
+    /* 属性数值网格 */
+    .attr-details { display: flex; flex-direction: column; justify-content: center; }
+    .attr-box {
+      background: #0f3460;
+      border: 1px solid #e94560;
+      border-radius: 8px;
+      padding: 15px;
+      margin-bottom: 15px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      box-shadow: inset 0 0 10px rgba(233, 69, 96, 0.2);
+    }
+    .attr-name { color: #fff; font-size: 16px; font-weight: bold; }
+    .attr-value { color: #e94560; font-size: 24px; font-family: 'Courier New', Courier, monospace; font-weight: 900; text-shadow: 0 0 5px rgba(233, 69, 96, 0.8); }
+    
+    /* ====== 番茄钟与技能 ====== */
+    .toolbar { margin-bottom: 15px; }
+    .pomodoro-container { display: flex; flex-direction: column; align-items: center; padding: 30px 0; }
+    .timer-display { font-size: 56px; font-weight: bold; color: #fff; font-family: monospace;}
+    .timer-status { font-size: 16px; color: #a4b0be; margin-top: 5px; }
+    .timer-controls { margin-top: 30px; margin-bottom: 30px; }
+    .task-creation { display: flex; justify-content: center; width: 100%; margin-bottom: 15px; }
+    
+    /* 表格深色适配 */
+    .el-table { --el-table-bg-color: #1a1a2e; --el-table-tr-bg-color: #1a1a2e; --el-table-header-bg-color: #0f3460; --el-table-text-color: #fff; --el-table-header-text-color: #a4b0be; --el-table-border-color: #0f3460; --el-table-row-hover-bg-color: #1f2a48; }
+    .el-table td.el-table__cell, .el-table th.el-table__cell.is-leaf { border-bottom: 1px solid #0f3460; }
+    
+    /* 强制覆盖表格 hover 效果，防止刺眼的白色 */
+    .el-table tbody tr:hover > td.el-table__cell {
+      background-color: #1f2a48 !important;
+    }
+    
+    .el-divider__text { background-color: #16213e; color: #fff; }
+  </style>
+</head>
+<body>
+  <div id="app">
+    <div class="app-container">
+      <el-card class="box-card">
+        <template #header>
+          <div class="card-header">
+            <span>⚔️ 现实世界OL (人生游戏化面板)</span>
+            <el-tag type="danger" effect="dark" size="large" style="background-color: #e94560; border: none;">当前状态: 精神饱满 (BUFF激活)</el-tag>
+          </div>
+        </template>
+
+        <el-tabs v-model="activeTab" @tab-click="handleTabClick">
+          
+          <!-- ================= 状态面板模块 (新增) ================= -->
+          <el-tab-pane label="🧑‍🎤 状态面板" name="status">
+            <el-row :gutter="20" style="margin-top: 10px;">
+              <!-- 左侧：人物基础信息 -->
+              <el-col :span="8">
+                <el-card class="profile-card" shadow="never">
+                  <div class="avatar-wrapper">
+                    <!-- 头像使用随机游戏化Icon -->
+                    <el-avatar :size="120" src="https://api.dicebear.com/7.x/adventurer/svg?seed=Felix"></el-avatar>
+                    <h2>Lv.{{ playerStats.level }} 高级游侠</h2>
+                    <el-tag effect="dark" color="#0f3460" style="border: 1px solid #e94560; color: #e94560; margin-top: 5px;">称号：进击的开发者</el-tag>
+                  </div>
+                  <div class="bars">
+                    <div class="bar-item">
+                      <span>👑 经验值 (EXP)</span>
+                      <el-progress :percentage="expPercentage" color="#e6a23c" :stroke-width="15" text-inside :format="() => `${playerStats.exp}/${playerStats.maxExp}`"></el-progress>
+                    </div>
+                    <div class="bar-item">
+                      <span>❤️ 体力 (HP) - 影响持续行动力</span>
+                      <el-progress :percentage="hpPercentage" color="#f56c6c" :stroke-width="15" text-inside :format="() => `${playerStats.hp}/${playerStats.maxHp}`"></el-progress>
+                    </div>
+                    <div class="bar-item">
+                      <span>🌌 精力 (MP) - 影响高强度专注</span>
+                      <el-progress :percentage="mpPercentage" color="#409eff" :stroke-width="15" text-inside :format="() => `${playerStats.mp}/${playerStats.maxMp}`"></el-progress>
+                    </div>
+                  </div>
+                </el-card>
+              </el-col>
+              
+              <!-- 右侧：雷达图和属性明细 -->
+              <el-col :span="16">
+                <el-card shadow="never" style="background: #1f2a48; border: 1px solid #2a3654; height: 100%;">
+                  <template #header>
+                    <span style="color: #fff; font-weight: bold;">💎 机能雷达图</span>
+                  </template>
+                  <div style="display: flex; height: 350px;">
+                    <!-- 雷达图容器 -->
+                    <div id="radarChart" style="width: 50%; height: 100%;"></div>
+                    
+                    <!-- 属性数值列表 -->
+                    <div class="attr-details" style="width: 50%; padding: 10px 20px;">
+                      <el-row :gutter="15">
+                        <el-col :span="12" v-for="(attr, index) in playerStats.attributes" :key="index">
+                          <div class="attr-box">
+                            <span class="attr-name">{{ attr.name }}</span>
+                            <span class="attr-value">{{ attr.value }}</span>
+                          </div>
+                        </el-col>
+                      </el-row>
+                    </div>
+                  </div>
+                </el-card>
+              </el-col>
+            </el-row>
+          </el-tab-pane>
+
+          <!-- ================= 技能管理模块 ================= -->
+          <el-tab-pane label="📚 技能树" name="skills">
+            <div class="toolbar" style="margin-top: 15px;">
+              <el-button color="#e94560" @click="openSkillDialog()" style="color: #fff;">+ 学习新技能</el-button>
+            </div>
+            <el-table :data="skillList" style="width: 100%" border>
+              <el-table-column prop="name" label="技能名称" width="220"></el-table-column>
+              <el-table-column prop="level" label="熟练度等级" width="150">
+                <template #default="scope">
+                  <span style="color: #e6a23c; font-weight: bold;">Lv.{{ scope.row.level }}</span>
+                </template>
+              </el-table-column>
+              <el-table-column prop="quality" label="稀有度品质" width="150">
+                <template #default="scope">
+                  <el-tag :type="getQualityColor(scope.row.quality)" effect="dark">
+                    {{ getQualityName(scope.row.quality) }}
+                  </el-tag>
+                </template>
+              </el-table-column>
+              <el-table-column label="操作">
+                <template #default="scope">
+                  <el-button size="small" type="primary" @click="openSkillDialog(scope.row)">打磨 (编辑)</el-button>
+                  <el-button size="small" type="danger" @click="deleteSkill(scope.row.id)">遗忘 (删除)</el-button>
+                </template>
+              </el-table-column>
+            </el-table>
+          </el-tab-pane>
+
+          <!-- ================= 番茄钟与任务模块 ================= -->
+          <el-tab-pane label="⏱️ 专注修炼" name="pomodoro">
+            <div class="pomodoro-container">
+              <el-progress type="dashboard" :percentage="timerPercentage" :color="timerColor" :width="280" :stroke-width="12">
+                <template #default>
+                  <div class="timer-display">{{ formattedTime }}</div>
+                  <div class="timer-status">{{ isRunning ? '深度冥想中 (涨经验)...' : '准备挂机修炼' }}</div>
+                </template>
+              </el-progress>
+              
+              <div class="timer-controls">
+                <el-button type="success" size="large" @click="startPomodoro" :disabled="isRunning">开始修炼</el-button>
+                <el-button type="warning" size="large" @click="pausePomodoro" :disabled="!isRunning">中断打坐</el-button>
+                <el-button type="danger" size="large" @click="resetPomodoro">走火入魔 (放弃)</el-button>
+              </div>
+              
+              <el-divider><span style="color: #e94560;">今日讨伐任务</span></el-divider>
+              
+              <div class="task-creation">
+                <el-input v-model="newTaskTitle" placeholder="输入每日任务 (如：通关LeetCode一道Hard)" style="width: 400px; margin-right: 15px;">
+                  <template #prefix>⚔️</template>
+                </el-input>
+                <el-button color="#e94560" style="color: #fff;" @click="createTask">接取任务</el-button>
+              </div>
+              
+              <el-table :data="taskList" style="width: 100%; margin-top: 10px;">
+                <el-table-column prop="title" label="任务目标"></el-table-column>
+                <el-table-column prop="status" label="状态" width="120">
+                  <template #default="scope">
+                    <el-tag :type="scope.row.status === '已完成' ? 'success' : 'info'" effect="dark">{{ scope.row.status }}</el-tag>
+                  </template>
+                </el-table-column>
+                <el-table-column label="操作" width="150">
+                  <template #default="scope">
+                    <el-button size="small" type="success" v-if="scope.row.status !== '已完成'" @click="completeTask(scope.row)">领取奖励</el-button>
+                  </template>
+                </el-table-column>
+              </el-table>
+            </div>
+          </el-tab-pane>
+
+          <!-- ================= 成功展示与成就模块 (新增) ================= -->
+          <el-tab-pane label="🏆 领域展开 (数据记录)" name="achievements">
+            <!-- Echarts 图表区 -->
+            <el-row :gutter="20">
+              <el-col :span="12">
+                <el-card shadow="never" class="box-card" style="margin-top: 10px; background: #1f2a48;">
+                  <template #header><span style="color: #fff; font-weight: bold;">📊 本周专注时长趋势</span></template>
+                  <div id="barChart" style="height: 280px; width: 100%;"></div>
+                </el-card>
+              </el-col>
+              <el-col :span="12">
+                <el-card shadow="never" class="box-card" style="margin-top: 10px; background: #1f2a48;">
+                  <template #header><span style="color: #fff; font-weight: bold;">🥧 技能修炼时间分布</span></template>
+                  <div id="pieChart" style="height: 280px; width: 100%;"></div>
+                </el-card>
+              </el-col>
+            </el-row>
+
+            <!-- 技能经验条展示区 -->
+            <el-card shadow="never" class="box-card" style="background: #1f2a48;">
+               <template #header><span style="color: #fff; font-weight: bold;">🌌 技能经验池 (EXP)</span></template>
+               <el-row :gutter="20">
+                 <el-col :span="12" v-for="skill in skillList" :key="skill.id" style="margin-bottom: 20px;">
+                   <div style="display: flex; justify-content: space-between; color: #a4b0be; margin-bottom: 8px; font-weight: bold;">
+                     <span>{{ skill.name }} <span style="color: #e6a23c;">(Lv.{{ skill.level }})</span></span>
+                     <span>{{ skill.exp }} / {{ skill.maxExp }}</span>
+                   </div>
+                   <el-progress 
+                     :percentage="Math.min(100, Number(((skill.exp / skill.maxExp) * 100).toFixed(1)))" 
+                     :color="getQualityHexColor(skill.quality)" 
+                     :stroke-width="12"
+                     :show-text="false">
+                   </el-progress>
+                 </el-col>
+               </el-row>
+            </el-card>
+
+            <!-- 修炼记录管理 -->
+            <el-card shadow="never" class="box-card" style="background: #1f2a48;">
+              <template #header>
+                <div style="display: flex; justify-content: space-between; align-items: center;">
+                  <span style="color: #fff; font-weight: bold;">📜 修炼卷轴 (支持手动补录)</span>
+                  <el-button color="#e94560" style="color: #fff;" @click="openRecordDialog()">+ 录入修炼记录</el-button>
+                </div>
+              </template>
+              <el-table :data="focusRecords" style="width: 100%;" border>
+                <el-table-column prop="date" label="记录周期" width="120"></el-table-column>
+                <el-table-column prop="duration" label="专注时长 (分钟)" width="150">
+                  <template #default="scope">
+                    <span style="color: #67c23a; font-weight: bold;">{{ scope.row.duration }} 分钟</span>
+                  </template>
+                </el-table-column>
+                <el-table-column label="修炼技能">
+                  <template #default="scope">
+                    <el-tag effect="dark" color="#0f3460" style="border: 1px solid #e94560; color: #fff;">
+                      {{ getSkillName(scope.row.skillId) }}
+                    </el-tag>
+                  </template>
+                </el-table-column>
+                <el-table-column label="操作" width="120">
+                  <template #default="scope">
+                    <el-button size="small" type="danger" @click="deleteRecord(scope.row.id)">抹除</el-button>
+                  </template>
+                </el-table-column>
+              </el-table>
+            </el-card>
+          </el-tab-pane>
+        </el-tabs>
+      </el-card>
+
+      <!-- 技能弹窗 -->
+      <el-dialog v-model="dialogVisible" :title="dialogForm.id ? '编辑技能' : '新增技能'" width="350px">
+        <el-form :model="dialogForm" label-width="80px">
+          <el-form-item label="技能名称">
+            <el-input v-model="dialogForm.name"></el-input>
+          </el-form-item>
+          <el-form-item label="稀有度">
+            <el-select v-model="dialogForm.quality" placeholder="选择品质" style="width: 100%;">
+              <el-option label="普通 (白)" value="1"></el-option>
+              <el-option label="优秀 (绿)" value="2"></el-option>
+              <el-option label="稀有 (蓝)" value="3"></el-option>
+              <el-option label="史诗 (紫)" value="4"></el-option>
+              <el-option label="传说 (金)" value="5"></el-option>
+            </el-select>
+          </el-form-item>
+          <el-form-item label="当前等级">
+            <el-input-number v-model="dialogForm.level" :min="1" :max="99" style="width: 100%;"></el-input-number>
+          </el-form-item>
+        </el-form>
+        <template #footer>
+          <span class="dialog-footer">
+            <el-button @click="dialogVisible = false">取消</el-button>
+            <el-button type="primary" @click="saveSkill">确定学习</el-button>
+          </span>
+        </template>
+      </el-dialog>
+
+      <!-- 录入记录弹窗 (新增) -->
+      <el-dialog v-model="recordDialogVisible" title="录入修炼记录" width="350px">
+        <el-form :model="recordForm" label-width="80px">
+          <el-form-item label="周期">
+            <el-select v-model="recordForm.date" placeholder="选择周期" style="width: 100%;">
+              <el-option label="周一" value="周一"></el-option>
+              <el-option label="周二" value="周二"></el-option>
+              <el-option label="周三" value="周三"></el-option>
+              <el-option label="周四" value="周四"></el-option>
+              <el-option label="周五" value="周五"></el-option>
+              <el-option label="周六" value="周六"></el-option>
+              <el-option label="周日" value="周日"></el-option>
+            </el-select>
+          </el-form-item>
+          <el-form-item label="时长(分)">
+            <el-input-number v-model="recordForm.duration" :min="1" :max="1440" style="width: 100%;"></el-input-number>
+          </el-form-item>
+          <el-form-item label="修炼技能">
+            <el-select v-model="recordForm.skillId" placeholder="选择对应技能" style="width: 100%;">
+              <el-option v-for="skill in skillList" :key="skill.id" :label="skill.name" :value="skill.id"></el-option>
+            </el-select>
+          </el-form-item>
+        </el-form>
+        <template #footer>
+          <span class="dialog-footer">
+            <el-button @click="recordDialogVisible = false">取消</el-button>
+            <el-button type="primary" @click="saveRecord">注入经验</el-button>
+          </span>
+        </template>
+      </el-dialog>
+    </div>
+  </div>
+
+  <!-- 引入 Vue 3, Element Plus, ECharts -->
+  <script src="https://unpkg.com/vue@3/dist/vue.global.js"></script>
+  <script src="https://unpkg.com/element-plus"></script>
+  <script src="https://cdn.jsdelivr.net/npm/echarts@5.5.0/dist/echarts.min.js"></script>
+  <!-- 引入 Axios 用于 Ajax 请求 -->
+  <script src="https://cdn.jsdelivr.net/npm/axios/dist/axios.min.js"></script>
+
+  <script>
+    const { createApp, ref, computed, reactive, onMounted, onUnmounted, nextTick } = Vue;
+    const { ElMessage, ElMessageBox } = ElementPlus;
+
+    // ================= Axios 全局配置 =================
+    const apiClient = axios.create({
+      baseURL: 'http://localhost:8080/api', // 指向未来的 SpringBoot 后端
+      timeout: 5000
+    });
+
+    // 响应拦截器：自动解包 Result<T> 格式
+    apiClient.interceptors.response.use(response => {
+      const res = response.data;
+      if (res.code === 200) {
+        return res.data; // 直接返回 data 部分
+      } else {
+        ElMessage.error(res.message || '系统接口错误');
+        return Promise.reject(new Error(res.message));
+      }
+    }, error => {
+      ElMessage.error('网络异常，请确保后端服务已启动！');
+      return Promise.reject(error);
+    });
+
+    const app = createApp({
+      setup() {
+        const activeTab = ref('status'); // 默认打开状态面板
+        let myChart = null; // ECharts 实例
+
+        // ================= 玩家属性数据 =================
+        const playerStats = reactive({
+          level: 1, exp: 0, maxExp: 1000, hp: 100, maxHp: 100, mp: 100, maxMp: 100,
+          attributes: []
+        });
+
+        // 抽取获取玩家状态的方法
+        const fetchPlayerStats = async () => {
+          try {
+            const data = await apiClient.get('/player/stats');
+            Object.assign(playerStats, data);
+            if (activeTab.value === 'status') nextTick(initChart);
+          } catch (e) { console.log('使用初始/缓存数据'); }
+        };
+
+        const expPercentage = computed(() => Number(((playerStats.exp / playerStats.maxExp) * 100).toFixed(1)) || 0);
+        const hpPercentage = computed(() => Number(((playerStats.hp / playerStats.maxHp) * 100).toFixed(1)) || 0);
+        const mpPercentage = computed(() => Number(((playerStats.mp / playerStats.maxMp) * 100).toFixed(1)) || 0);
+
+        // 初始化雷达图
+        const initChart = () => {
+          const dom = document.getElementById('radarChart');
+          if (!dom) return;
+          
+          if (myChart != null && myChart != "" && myChart != undefined) {
+             myChart.dispose(); // 销毁之前的实例防止内存泄漏
+          }
+          myChart = echarts.init(dom);
+          
+          const option = {
+            tooltip: {},
+            radar: {
+              indicator: playerStats.attributes.map(a => ({ name: a.name, max: a.max })),
+              shape: 'polygon',
+              splitNumber: 4,
+              axisName: {
+                color: '#fff',
+                backgroundColor: '#0f3460',
+                borderRadius: 3,
+                padding: [3, 5]
+              },
+              splitArea: {
+                areaStyle: { color: ['rgba(233, 69, 96, 0.1)', 'rgba(233, 69, 96, 0.2)', 'rgba(233, 69, 96, 0.3)', 'rgba(233, 69, 96, 0.4)'].reverse() }
+              },
+              axisLine: { lineStyle: { color: 'rgba(233, 69, 96, 0.5)' } },
+              splitLine: { lineStyle: { color: 'rgba(233, 69, 96, 0.5)' } }
+            },
+            series: [{
+              name: '个人机能数值',
+              type: 'radar',
+              data: [{
+                value: playerStats.attributes.map(a => a.value),
+                name: '当前属性',
+                itemStyle: { color: '#e94560' },
+                areaStyle: { color: 'rgba(233, 69, 96, 0.5)' }
+              }]
+            }]
+          };
+          myChart.setOption(option);
+        };
+
+        const handleTabClick = (tab) => {
+          if (tab.paneName === 'status') {
+            // 当切换到状态面板时，等待DOM渲染完毕后初始化/重置图表尺寸
+            nextTick(() => {
+              setTimeout(initChart, 100);
+            });
+          } else if (tab.paneName === 'achievements') {
+            // 当切换到成就面板时，初始化新增的两个图表
+            nextTick(() => { 
+              setTimeout(() => {
+                initBarChart();
+                initPieChart();
+              }, 100); 
+            });
+          }
+        };
+
+        // ================= 技能模块 =================
+        const skillList = ref([]); // 初始为空，由后端获取
+
+        const fetchSkills = async () => {
+          try {
+            skillList.value = await apiClient.get('/skill/list');
+          } catch (e) { console.log('获取技能失败'); }
+        };
+
+        const dialogVisible = ref(false);
+        const dialogForm = reactive({ id: null, name: '', level: 1, quality: '1' });
+
+        const getQualityName = (quality) => {
+          const map = { '1': '普通', '2': '优秀', '3': '稀有', '4': '史诗', '5': '传说' };
+          return map[quality] || '未知';
+        };
+
+        const getQualityColor = (quality) => {
+          const map = { '1': 'info', '2': 'success', '3': '', '4': 'warning', '5': 'danger' };
+          return map[quality] || '';
+        };
+
+        const openSkillDialog = (row = null) => {
+          if (row) {
+            Object.assign(dialogForm, row);
+          } else {
+            Object.assign(dialogForm, { id: null, name: '', level: 1, quality: '1' });
+          }
+          dialogVisible.value = true;
+        };
+        const saveSkill = async () => {
+          try {
+            if (dialogForm.id) {
+              await apiClient.put('/skill/update', dialogForm);
+              ElMessage.success('技能打磨完毕！熟练度上升。');
+            } else {
+              await apiClient.post('/skill/add', dialogForm);
+              ElMessage.success('恭喜！领悟了新的技能！');
+            }
+            dialogVisible.value = false;
+            fetchSkills(); // 重新拉取最新列表
+          } catch (e) {
+            // 异常已被拦截器处理
+          }
+        };
+
+        const deleteSkill = (id) => {
+          ElMessageBox.confirm('确定要遗忘这个技能吗？经验将无法挽回！', '危险操作', {
+            confirmButtonText: '确定遗忘', cancelButtonText: '取消', type: 'error'
+          }).then(async () => {
+            await apiClient.delete(`/skill/delete/${id}`);
+            ElMessage.success('技能已从记忆中剥离。');
+            fetchSkills();
+          }).catch(() => {});
+        };
+
+        // ================= 番茄钟模块 =================
+        const WORK_TIME = 25 * 60;
+        const timeLeft = ref(WORK_TIME);
+        const isRunning = ref(false);
+        let timer = null;
+
+        const timerPercentage = computed(() => {
+          return Number(((WORK_TIME - timeLeft.value) / WORK_TIME * 100).toFixed(1));
+        });
+
+        const timerColor = computed(() => {
+          if (timerPercentage.value < 50) return '#67c23a';
+          if (timerPercentage.value < 80) return '#e6a23c';
+          return '#e94560';
+        });
+
+        const formattedTime = computed(() => {
+          const minutes = Math.floor(timeLeft.value / 60).toString().padStart(2, '0');
+          const seconds = (timeLeft.value % 60).toString().padStart(2, '0');
+          return `${minutes}:${seconds}`;
+        });
+
+        const startPomodoro = () => {
+          if (isRunning.value) return;
+          if (playerStats.mp < 10) {
+            ElMessage.error('精力不足，请先休息恢复 MP！');
+            return;
+          }
+          isRunning.value = true;
+          timer = setInterval(() => {
+            if (timeLeft.value > 0) {
+              timeLeft.value--;
+            } else {
+              completePomodoro();
+            }
+          }, 1000);
+        };
+
+        const pausePomodoro = () => {
+          isRunning.value = false;
+          clearInterval(timer);
+        };
+
+        const resetPomodoro = () => {
+          pausePomodoro();
+          timeLeft.value = WORK_TIME;
+        };
+
+        const completePomodoro = async () => {
+          pausePomodoro();
+          timeLeft.value = WORK_TIME;
+          try {
+            // 向后端发送番茄钟完成记录，后端处理经验增加和MP扣除逻辑
+            const res = await apiClient.post('/pomodoro/complete', { duration: 25 });
+            ElMessage({ message: res.upgradeMsg || '✨ 修炼完成！经验增加，精力消耗', type: 'success', duration: 3000 });
+            fetchPlayerStats(); // 刷新人物状态
+          } catch (e) {
+            ElMessage.warning('离线修炼完成，但未同步至云端。');
+          }
+        };
+
+        // ================= 任务模块 =================
+        const taskList = ref([]);
+        
+        const fetchTasks = async () => {
+          try {
+            taskList.value = await apiClient.get('/task/list');
+          } catch (e) {}
+        };
+
+        const newTaskTitle = ref('');
+
+        const createTask = async () => {
+          if (!newTaskTitle.value) {
+            ElMessage.warning('任务目标不能为空！');
+            return;
+          }
+          await apiClient.post('/task/add', { title: newTaskTitle.value, status: '未开始' });
+          newTaskTitle.value = '';
+          ElMessage.success('新任务接取成功，努力完成吧！');
+          fetchTasks();
+        };
+
+        const completeTask = async (task) => {
+          await apiClient.put(`/task/complete/${task.id}`);
+          ElMessage.success(`任务【${task.title}】结算完成，获得经验！`);
+          fetchTasks();
+          fetchPlayerStats(); // 刷新经验
+        };
+
+        // ================= 成就展示与修炼记录模块 (新增) =================
+        let barChart = null;
+        let pieChart = null;
+        
+        const focusRecords = ref([]);
+
+        const fetchRecords = async () => {
+          try {
+            focusRecords.value = await apiClient.get('/record/list');
+            initBarChart();
+            initPieChart();
+          } catch (e) {}
+        };
+
+        const recordDialogVisible = ref(false);
+        const recordForm = reactive({ id: null, date: '周一', duration: 30, skillId: '' });
+
+        const getSkillName = (id) => {
+          const skill = skillList.value.find(s => s.id === id);
+          return skill ? skill.name : '未知';
+        };
+
+        const getQualityHexColor = (quality) => {
+          const map = { '1': '#909399', '2': '#67c23a', '3': '#409eff', '4': '#e6a23c', '5': '#f56c6c' };
+          return map[quality] || '#409eff';
+        };
+
+        const initBarChart = () => {
+          const dom = document.getElementById('barChart');
+          if (!dom) return;
+          if (barChart) barChart.dispose();
+          barChart = echarts.init(dom);
+
+          // 聚合每天的总时间
+          const days = ['周一', '周二', '周三', '周四', '周五', '周六', '周日'];
+          const data = days.map(d => {
+            return focusRecords.value.filter(r => r.date === d).reduce((sum, r) => sum + r.duration, 0);
+          });
+
+          barChart.setOption({
+            tooltip: { trigger: 'axis', formatter: '{b}: {c} 分钟' },
+            xAxis: { type: 'category', data: days, axisLabel: { color: '#a4b0be' } },
+            yAxis: { type: 'value', axisLabel: { color: '#a4b0be' }, splitLine: { lineStyle: { color: '#2a3654' } } },
+            series: [{
+              data: data,
+              type: 'bar',
+              itemStyle: { color: new echarts.graphic.LinearGradient(0, 0, 0, 1, [{ offset: 0, color: '#e94560' }, { offset: 1, color: '#0f3460' }]), borderRadius: [4, 4, 0, 0] }
+            }]
+          });
+        };
+
+        const initPieChart = () => {
+          const dom = document.getElementById('pieChart');
+          if (!dom) return;
+          if (pieChart) pieChart.dispose();
+          pieChart = echarts.init(dom);
+
+          // 聚合每个技能的总时间
+          const skillTimeMap = {};
+          focusRecords.value.forEach(r => {
+            if (!skillTimeMap[r.skillId]) skillTimeMap[r.skillId] = 0;
+            skillTimeMap[r.skillId] += r.duration;
+          });
+
+          const data = Object.keys(skillTimeMap).map(skillId => ({
+            name: getSkillName(Number(skillId)),
+            value: skillTimeMap[skillId]
+          }));
+
+          pieChart.setOption({
+            tooltip: { trigger: 'item', formatter: '{b}: {c}分钟 ({d}%)' },
+            legend: { orient: 'vertical', left: 'left', textStyle: { color: '#a4b0be' } },
+            series: [{
+              name: '修炼分布', type: 'pie', radius: '60%', data: data,
+              label: { color: '#fff' },
+              emphasis: { itemStyle: { shadowBlur: 10, shadowOffsetX: 0, shadowColor: 'rgba(0, 0, 0, 0.5)' } }
+            }]
+          });
+        };
+
+        const openRecordDialog = () => {
+          Object.assign(recordForm, { id: null, date: '周一', duration: 30, skillId: skillList.value[0]?.id || '' });
+          recordDialogVisible.value = true;
+        };
+
+        const saveRecord = async () => {
+          if (!recordForm.skillId) {
+            ElMessage.warning('请选择修炼的技能！');
+            return;
+          }
+          
+          await apiClient.post('/record/add', recordForm);
+          ElMessage.success('修炼记录已同步至天地法则(数据库)！');
+          
+          recordDialogVisible.value = false;
+          fetchRecords(); // 刷新记录和图表
+          fetchSkills();  // 刷新技能经验条
+        };
+
+        const deleteRecord = async (id) => {
+          await apiClient.delete(`/record/delete/${id}`);
+          ElMessage.success('已消除该条记录。');
+          fetchRecords();
+        };
+
+        onMounted(() => {
+          // 初始化加载所有后端数据
+          fetchPlayerStats();
+          fetchSkills();
+          fetchTasks();
+          fetchRecords();
+
+          // 初始化时如果是状态面板，渲染图表
+          if(activeTab.value === 'status'){
+            setTimeout(initChart, 200);
+          }
+          // 监听窗口大小变化以适应所有图表
+          window.addEventListener('resize', () => {
+            if (myChart) myChart.resize();
+            if (barChart) barChart.resize();
+            if (pieChart) pieChart.resize();
+          });
+        });
+
+        onUnmounted(() => {
+          if (timer) clearInterval(timer);
+          if (myChart) myChart.dispose();
+          if (barChart) barChart.dispose();
+          if (pieChart) pieChart.dispose();
+        });
+
+        return {
+          activeTab, handleTabClick, playerStats, expPercentage, hpPercentage, mpPercentage,
+          skillList, dialogVisible, dialogForm, 
+          getQualityName, getQualityColor, openSkillDialog, saveSkill, deleteSkill,
+          timeLeft, isRunning, timerPercentage, timerColor, formattedTime,
+          startPomodoro, pausePomodoro, resetPomodoro,
+          taskList, newTaskTitle, createTask, completeTask,
+          // 导出成就模块的新属性与方法
+          focusRecords, recordDialogVisible, recordForm, getSkillName, getQualityHexColor, openRecordDialog, saveRecord, deleteRecord
+        };
+      }
+    });
+
+    app.use(ElementPlus);
+    app.mount('#app');
+  </script>
+</body>
+</html>
